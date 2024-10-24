@@ -6,7 +6,7 @@ const GradingUI: React.FC = () => {
   // State management for inputs
   const [files, setFiles] = useState<File[]>([]);
   const [rubric, setRubric] = useState<string>("");
-  const [rubricFile, setRubricFile] = useState<File | null>(null);
+  const [rubricFiles, setRubricFiles] = useState<File[]>([]);
   const [threshold, setThreshold] = useState({
     relevance: 0.5,
     grammar: 0.5,
@@ -20,7 +20,7 @@ const GradingUI: React.FC = () => {
     depth: 0.25,
   });
 
-  // Handlers
+  // Handlers for Paper upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles((prevFiles) => [...prevFiles, ...Array.from(e.target.files)]);
@@ -28,8 +28,8 @@ const GradingUI: React.FC = () => {
   };
 
   const handleRubricFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setRubricFile(e.target.files[0]);
+    if (e.target.files) {
+      setRubricFiles((prevFiles) => [...prevFiles, ...Array.from(e.target.files)]);
     }
   };
 
@@ -37,18 +37,24 @@ const GradingUI: React.FC = () => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
-  const removeRubricFile = () => {
-    setRubricFile(null);
+  const removeRubricFile = (index: number) => {
+    setRubricFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
-  const handleThresholdChange = (e: React.ChangeEvent<HTMLInputElement>, section: string) => {
+  const handleThresholdChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    section: string
+  ) => {
     setThreshold({
       ...threshold,
       [section]: parseFloat(e.target.value),
     });
   };
 
-  const handleWeightageChange = (e: React.ChangeEvent<HTMLInputElement>, section: string) => {
+  const handleWeightageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    section: string
+  ) => {
     setWeightage({
       ...weightage,
       [section]: parseFloat(e.target.value),
@@ -57,13 +63,27 @@ const GradingUI: React.FC = () => {
 
   const handleAnalyze = () => {
     // Call LangGraph API or backend process here
-    console.log("Analyzing", { files, rubric, rubricFile, threshold, weightage });
+    console.log("Analyzing", {
+      files,
+      rubric,
+      rubricFiles,
+      threshold,
+      weightage,
+    });
   };
 
-  const handleReset = () => {
+  // Separate reset buttons for each section
+  const handleResetFiles = () => {
     setFiles([]);
     setRubric("");
-    setRubricFile(null);
+  };
+
+  const handleResetRubric = () => {
+    setRubricFiles([]);
+    setRubric("");
+  };
+
+  const handleResetThreshold = () => {
     setThreshold({
       relevance: 0.5,
       grammar: 0.5,
@@ -80,111 +100,188 @@ const GradingUI: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6 flex justify-center items-center">
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-5xl ">
-        <h2 className="text-2xl font-bold mb-6 text-center text-white">Paper Grading System</h2>
+      <div className="bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-5xl">
+        <h2 className="text-2xl font-bold mb-6 text-center text-white">
+          Paper Grading System
+        </h2>
 
         {/* Grid Layout with 3 Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 justify-between" style={{ gridTemplateColumns: "50% 22% 22%" }}>
+        <div
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          style={{ gridTemplateColumns: "50% 22% 22%" }}
+        >
           {/* First Column: Papers and Rubric Section (larger column) */}
           <div className="p-4">
             {/* Paper upload section */}
             <div className="mb-6">
-              <label className="block mb-2 text-sm font-medium text-gray-300">Upload Papers:</label>
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Enter Text or Upload Papers:
+              </label>
+
+              {/* Text-like container to show file names with a cross button */}
+              <div className={`w-full p-2.5 bg-gray-700 rounded-lg border border-gray-600 text-gray-100 placeholder-gray-400 mb-4 h-32 ${files.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
+                {files.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-600 px-2 py-1 rounded flex items-center"
+                      >
+                        <span className="text-sm truncate max-w-xs">{file.name}</span>
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="ml-2 text-red-400 hover:text-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <textarea
+                    value={rubric}
+                    onChange={(e) => setRubric(e.target.value)}
+                    placeholder="Enter text or upload files"
+                    className="w-full bg-transparent border-none text-gray-100 h-full"
+                    rows={4}
+                  />
+                )}
+              </div>
+
+              {/* File input */}
               <input
                 type="file"
                 multiple
                 onChange={handleFileUpload}
                 className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
               />
-              {files.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {files.map((file, index) => (
-                    <li key={index} className="flex justify-between text-sm text-gray-400">
-                      {file.name}
-                      <button
-                        onClick={() => removeFile(index)}
-                        className="text-red-400 hover:text-red-600"
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+
+              {/* Reset Button for Papers */}
+              <button
+                onClick={handleResetFiles}
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
+              >
+                Reset Papers
+              </button>
             </div>
 
             {/* Rubric section */}
             <div className="mb-6">
-              <label className="block mb-2 text-sm font-medium text-gray-300">Rubric (Text or File):</label>
-              <textarea
-                value={rubric}
-                onChange={(e) => setRubric(e.target.value)}
-                placeholder="Enter grading rubric here"
-                className="w-full p-2.5 bg-gray-700 rounded-lg border border-gray-600 text-gray-100 placeholder-gray-400 mb-4"
-                rows={4}
-              />
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Rubric (Text or File):
+              </label>
+
+              {/* Rubric file list and text */}
+              <div className={`w-full p-2.5 bg-gray-700 rounded-lg border border-gray-600 text-gray-100 placeholder-gray-400 mb-4 h-32 ${rubricFiles.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
+                {rubricFiles.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {rubricFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-600 px-2 py-1 rounded flex items-center"
+                      >
+                        <span className="text-sm truncate max-w-xs">{file.name}</span>
+                        <button
+                          onClick={() => removeRubricFile(index)}
+                          className="ml-2 text-red-400 hover:text-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <textarea
+                    value={rubric}
+                    onChange={(e) => setRubric(e.target.value)}
+                    placeholder="Enter rubric text or upload file"
+                    className="w-full bg-transparent border-none text-gray-100 h-full"
+                    rows={4}
+                  />
+                )}
+              </div>
+
+              {/* File input for rubric */}
               <input
                 type="file"
+                multiple
                 onChange={handleRubricFileUpload}
                 className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
               />
-              {rubricFile && (
-                <div className="mt-4 flex justify-between text-sm text-gray-400">
-                  {rubricFile.name}
-                  <button onClick={removeRubricFile} className="text-red-400 hover:text-red-600">
-                    Remove
-                  </button>
-                </div>
-              )}
+
+              {/* Reset Button for Rubric */}
+              <button
+                onClick={handleResetRubric}
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
+              >
+                Reset Rubric
+              </button>
             </div>
           </div>
 
           {/* Second Column: Threshold Section (smaller column) */}
           <div>
             <div className="p-4 bg-gray-700 rounded-lg">
-              <h3 className="text-lg font-medium text-white mb-4">Threshold Levels</h3>
+              <h3 className="text-lg font-medium text-white mb-4">
+                Threshold Levels
+              </h3>
               {["relevance", "grammar", "structure", "depth"].map((section) => (
                 <div key={section} className="mb-4">
                   <label className="block mb-1 text-sm font-medium text-gray-300">
                     {section.charAt(0).toUpperCase() + section.slice(1)}:
                   </label>
-                  <div className="flex justify-between"> 
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={threshold[section as keyof typeof threshold]}
-                    onChange={(e) => handleThresholdChange(e, section)}
-                    className="w-3/4"
+                  <div className="flex justify-between">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={threshold[section as keyof typeof threshold]}
+                      onChange={(e) => handleThresholdChange(e, section)}
+                      className="w-3/4"
                     />
-                  <span className="text-gray-300 text-sm">{threshold[section as keyof typeof threshold]}</span>
-                    </div>
+                    <span className="text-gray-300 text-sm">
+                      {threshold[section as keyof typeof threshold]}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* Reset Button for Threshold */}
+            <button
+              onClick={handleResetThreshold}
+              className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
+            >
+              Reset Threshold
+            </button>
           </div>
 
           {/* Third Column: Weightage Section (smaller column) */}
           <div>
             <div className="p-4 bg-gray-700 rounded-lg">
-              <h3 className="text-lg font-medium text-white mb-4">Weightage Selection</h3>
+              <h3 className="text-lg font-medium text-white mb-4">
+                Weightage Selection
+              </h3>
               {["relevance", "grammar", "structure", "depth"].map((section) => (
                 <div key={section} className="mb-4">
                   <label className="block mb-1 text-sm font-medium text-gray-300">
-                    {section.charAt(0).toUpperCase() + section.slice(1)} Weightage:
+                    {section.charAt(0).toUpperCase() + section.slice(1)}{" "}
+                    Weightage:
                   </label>
                   <div className="flex justify-between">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={weightage[section as keyof typeof weightage]}
-                    onChange={(e) => handleWeightageChange(e, section)}
-                    className="w-3/4"
-                  />
-                  <span className="text-gray-300 text-sm">{weightage[section as keyof typeof weightage]}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={weightage[section as keyof typeof weightage]}
+                      onChange={(e) => handleWeightageChange(e, section)}
+                      className="w-3/4"
+                    />
+                    <span className="text-gray-300 text-sm">
+                      {weightage[section as keyof typeof weightage]}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -193,18 +290,12 @@ const GradingUI: React.FC = () => {
         </div>
 
         {/* Analyze and Reset buttons */}
-        <div className="flex mt-8">
+        <div className="flex mt-8 space-x-4">
           <button
             onClick={handleAnalyze}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
           >
             Analyze
-          </button>
-          <button
-            onClick={handleReset}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
-          >
-            Reset
           </button>
         </div>
       </div>
